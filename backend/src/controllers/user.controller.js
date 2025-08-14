@@ -100,6 +100,7 @@ export async function acceptFriendRequest(req, res) {
         await friendRequest.save();
 
         //adding each user to the other's friends array in database.
+        // $addToSet: adds element
         await User.findByIdAndUpdate(friendRequest.sender,{
             $addToSet: {friends: friendRequest.recipient},
         });
