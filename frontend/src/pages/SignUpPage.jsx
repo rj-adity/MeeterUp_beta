@@ -2,7 +2,7 @@ import  { useState } from 'react'
 import {PandaIcon} from 'lucide-react'
 import { Link } from 'react-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { axiosInstance } from '../lib/axios';
+import { signup } from '../lib/api';
 
 const SignUpPage = () => {
 const [signupData, setSignupData] = useState({
@@ -12,17 +12,14 @@ const [signupData, setSignupData] = useState({
 });
 const queryClient = useQueryClient();
 
-const {mutate, isPending, error} = useMutation({
-  mutationFn: async() => {
-    const response = await axiosInstance.post("/auth/signup", signupData);
-    return response.data;
-  },
+const {mutate: SignupMutation, isPending, error} = useMutation({
+  mutationFn: signup,
   onSuccess: () => queryClient.invalidateQueries({queryKey: ["authUser"]})
 });
 
 const handleSignup =(e) => {
   e.preventDefault();
-  mutate()
+  SignupMutation(signupData);
 }
 
 return( 
@@ -37,6 +34,13 @@ return(
         MeeterUp
       </span>
      </div>
+    {/* ERROR IF MESSAGE ANY */}
+    {error &&
+      <div className='alert alert-error mb-4 '>
+        <span>(error.response.data.message)</span>
+      </div>
+    }
+
      <div className='w-full'>
       <form onSubmit={handleSignup}>
 
@@ -86,6 +90,7 @@ return(
                value={signupData.password}
                onChange={(e) => setSignupData({...signupData, password: e.target.value})}
                required
+               minLength={6}
               />
               <p className='text-xs opacity-70 mt-1'>
                 Password must be at least 6 characters long
@@ -103,7 +108,14 @@ return(
             </div>
           </div>
           <button className='btn btn-primary w-full' type='submit'>
-           {isPending ? "Signing up...": "Create Account"}
+           {isPending ? (
+            <>
+            <span className='loading loading-spinner loading-xs'></span>
+            Loading...
+            </>
+           ): (
+            "Create Account"
+           )}
           </button>
           <div className='text-center mt-4'>
             <p className='text-sm'>
