@@ -8,10 +8,27 @@ import CallPage from './pages/CallPage.jsx';
 import ChatPage from './pages/ChatPage';
 import OnboardingPage from './pages/OnboardingPage.jsx';
 import toast, {Toaster} from 'react-hot-toast';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 
 
 
 const App = () => {
+
+  //transtack query
+  //axios
+  const {data, isLoading, error, refetch} = useQuery({
+    queryKey: ["todos"],
+    queryFn: async ()=> {
+      const res = await axios.get("https://jsonplaceholder.cypress.io/todos/1")
+      return res.data;
+    },
+  });
+
+  console.log({data});
+  console.log({isLoading});
+  console.log({error});
+
   return (
     <div className=' h-screen' data-theme="night" >
       <Routes>
