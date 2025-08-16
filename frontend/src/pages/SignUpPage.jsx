@@ -1,8 +1,8 @@
 import  { useState } from 'react'
 import {PandaIcon} from 'lucide-react'
 import { Link } from 'react-router';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { signup } from '../lib/api';
+// import { useMutation, useQueryClient } from '@tanstack/react-query';
+import useSignup from '../hooks/useSignup';
 
 const SignUpPage = () => {
 const [signupData, setSignupData] = useState({
@@ -10,12 +10,13 @@ const [signupData, setSignupData] = useState({
   email: "",
   password: "",
 });
-const queryClient = useQueryClient();
+// const queryClient = useQueryClient();
 
-const {mutate: SignupMutation, isPending, error} = useMutation({
-  mutationFn: signup,
-  onSuccess: () => queryClient.invalidateQueries({queryKey: ["authUser"]})
-});
+// const {mutate: SignupMutation, isPending, error} = useMutation({
+//   mutationFn: signup,
+//   onSuccess: () => queryClient.invalidateQueries({queryKey: ["authUser"]})
+// });
+const {isPending, error, SignupMutation} = useSignup
 
 const handleSignup =(e) => {
   e.preventDefault();
