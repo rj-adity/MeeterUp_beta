@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: "",
     },
-    learninglanguage:{
+    learningLanguage:{
         type:String,
         default: "",
     },

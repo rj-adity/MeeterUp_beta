@@ -16,7 +16,7 @@ const [signupData, setSignupData] = useState({
 //   mutationFn: signup,
 //   onSuccess: () => queryClient.invalidateQueries({queryKey: ["authUser"]})
 // });
-const {isPending, error, SignupMutation} = useSignup
+const {isPending, error, SignupMutation} = useSignup();
 
 const handleSignup =(e) => {
   e.preventDefault();
