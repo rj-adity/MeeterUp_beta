@@ -20,16 +20,16 @@ const Navbar = () => {
                 {/* LOGO ONLY IF IN THE CHAT PAGE */}
                 {isChatPage && (
                     <div className="pl-5" >
-                        <Link to="/" className="size-9 text-primary">
+                        <Link to="/" className="flex items-center gap-2.5">
                         <PandaIcon className="size-9 text-primary" />
                         <span className="text-3xl font-bold font-mono bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary tracking-wider" >
-                            MeeterUp
+                         MeeterUp
                         </span>
                         </Link>
                     </div>
                 )}
 
-                <div className="flex items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-3 sm:gap-4 ml-auto">
                     <Link to ={"/notification"} >
                         <button className="btn btn-ghost btn-circle" >
                             <BellIcon className="h-6 w-6 text-base-content opacity-70" />
