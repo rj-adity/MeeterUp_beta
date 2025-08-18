@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: meeterup-app
+    env: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: STEAM_API_KEY
+        sync: false
+      - key: STEAM_API_SECRET
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: MONGO_URI
+        sync: false

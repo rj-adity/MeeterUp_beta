@@ -35,8 +35,8 @@ const __dirname = path.resolve();
 // CORS configuration for production
 const allowedOrigins = [
     "http://localhost:5173",
-    "https://meeterup-beta-lnvpu7s28-rj-aditys-projects.vercel.app",
-    "https://meeterup-beta.vercel.app"
+    "https://meeterup-beta.onrender.com",
+    "https://meeterup-app.onrender.com"
 ];
 
 app.use(cors({
@@ -77,14 +77,37 @@ app.get("/api/health", (req, res) => {
     res.json({ message: "MeeterUp API is running", status: "healthy" });
 });
 
-// For Vercel serverless functions
-if (process.env.NODE_ENV === "production") {
-    // Export for Vercel
-    module.exports = app;
+// Serve frontend build if it exists (for production)
+const possibleDistPaths = [
+    path.join(__dirname, "../frontend/dist"),
+    path.join(__dirname, "frontend/dist")
+];
+
+let distPath = null;
+for (const path of possibleDistPaths) {
+    if (fs.existsSync(path)) {
+        distPath = path;
+        console.log("Serving frontend from:", distPath);
+        break;
+    }
+}
+
+if (distPath) {
+    app.use(express.static(distPath));
+    
+    // Handle SPA routing - serve index.html for all non-API routes
+    app.get("*", (req, res) => {
+        res.sendFile(path.join(distPath, "index.html"));
+    });
 } else {
-    // Local development
-    app.listen(PORT, ()=> {
-        console.log(`Server is running on port ${PORT}` );
-        connectDB();
+    console.log("No frontend build found, serving API only");
+    app.get("/", (req, res) => {
+        res.json({ message: "MeeterUp API is running", status: "healthy" });
     });
 }
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    connectDB();
+});

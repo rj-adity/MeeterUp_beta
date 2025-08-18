@@ -2,11 +2,13 @@
   "name": "meeterup",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "backend/src/server.js",
   "scripts": {
-    "build": "cd frontend && npm install && npm run build",
+    "build": "cd frontend && npm install && npm run build && cd .. && mkdir -p backend/frontend && cp -r frontend/dist backend/frontend/",
     "start": "cd backend && npm install && npm start",
-    "vercel-build": "npm run build"
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev"
   },
   "repository": {
     "type": "git",
@@ -19,5 +21,8 @@
   "bugs": {
     "url": "https://github.com/YOUR_USERNAME/YOUR_NEW_REPO/issues"
   },
-  "homepage": "https://github.com/YOUR_USERNAME/YOUR_NEW_REPO#readme"
+  "homepage": "https://github.com/YOUR_USERNAME/YOUR_NEW_REPO#readme",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
 }
