@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { getStreamToken } from "../lib/api";
 import {
   Channel,
-  ChannelHeader,
   Chat,
   MessageInput,
   MessageList,
@@ -15,14 +14,12 @@ import {
 import { StreamChat } from "stream-chat";
 import ChatLoader from "../components/ChatLoader";
 import CallButton from "../components/CallButton";
-
+import toast from "react-hot-toast";
 
 const STREAM_API_KEY = import.meta.env.VITE_STREAM_API_KEY
 
 const ChatPage = () => {
-
   const {id: targetUserId} = useParams();
-
   const [chatClient, setChatClient] = useState(null);
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -37,7 +34,10 @@ const ChatPage = () => {
 
   useEffect(()=> {
     const initChat = async () => {
-      if(!tokenData?.token  || !authUser) return;
+      if(!tokenData?.token  || !authUser) {
+        console.log("Waiting for token or authUser:", { hasToken: !!tokenData?.token, hasAuthUser: !!authUser });
+        return;
+      }
 
       try {
         console.log("Initialising stream chat client...")
@@ -47,17 +47,17 @@ const ChatPage = () => {
         await client.connectUser({
           id: authUser._id,
           name: authUser.fullName,
-          image: authUser.profilePic,
-        }, tokenData.token) 
+        }, tokenData.token);
 
         const channelId = [authUser._id, targetUserId].sort().join("_");
 
         //Create a channel 
-
         const currChannel = client.channel("messaging", channelId, {
           members: [authUser._id, targetUserId],
         });
+        
         await currChannel.watch();
+        
         setChatClient(client);
         setChannel(currChannel);
       } catch (error) {
@@ -68,6 +68,13 @@ const ChatPage = () => {
       }
     }
     initChat();
+    
+    // Cleanup function to disconnect client when component unmounts
+    return () => {
+      if (chatClient) {
+        chatClient.disconnectUser();
+      }
+    };
   },[tokenData, authUser, targetUserId]);
 
   const handleVideoCall = () => {
@@ -84,23 +91,52 @@ const ChatPage = () => {
 
   if(loading || !chatClient || !channel ) return <ChatLoader />;
 
-
-
   return (
-    <div className="h-[93vh]" >
-      <Chat client={chatClient} >
-        <Channel channel={channel} >
-          <div className="w-full relative" >
-            <CallButton handleVideoCall={handleVideoCall} />
-            <Window >
-              <ChannelHeader />
-              <MessageList />
-              <MessageInput focus />
-            </Window>
+    <div className="min-h-screen p-4 flex items-center justify-center" style={{ backgroundColor: `hsl(var(--b2))` }}>
+      <div className="w-full max-w-4xl bg-base-100 rounded-lg shadow-lg flex flex-col h-[80vh]">
+        {/* Custom Header - Outside of Stream Chat components */}
+        <div className="flex items-center justify-between p-4 border-b border-base-300 shrink-0 bg-base-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">
+              {channel?.state?.members?.[targetUserId]?.user?.image ? (
+                <img 
+                  src={channel.state.members[targetUserId].user.image} 
+                  alt="User avatar" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-primary flex items-center justify-center text-white font-semibold">
+                  {channel?.state?.members?.[targetUserId]?.user?.name?.charAt(0)?.toUpperCase() || 
+                   targetUserId?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+              )}
+            </div>
+            <div>
+              <h2 className="font-semibold text-lg text-base-content">
+                {channel?.state?.members?.[targetUserId]?.user?.name || 
+                 `User ${targetUserId?.slice(-4) || ''}`}
+              </h2>
+              <p className="text-sm text-base-content/70">2 members, 2 online</p>
+            </div>
           </div>
-          <Thread />
-        </Channel>
-      </Chat>
+          <div className="flex items-center">
+            <CallButton handleVideoCall={handleVideoCall} />
+          </div>
+        </div>
+
+        {/* Chat Content */}
+        <div className="flex-1 min-h-0">
+          <Chat client={chatClient}>
+            <Channel channel={channel}>
+              <Window>
+                <MessageList />
+                <MessageInput focus disableVoiceRecording />
+              </Window>
+              <Thread />
+            </Channel>
+          </Chat>
+        </div>
+      </div>
     </div>
   )
 }

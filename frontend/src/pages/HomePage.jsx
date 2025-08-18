@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { getOutgoingFriendReqs, getRecommendedUsers, getUserFriends, sendFriendRequest } from "../lib/api";
 import {Link } from "react-router";
 import { CheckCircleIcon, MapPinIcon, User, UserPlusIcon, UsersIcon} from "lucide-react";
-import FriendCard, { getLanguageFlag } from "../components/FriendCard";
+import FriendCard from "../components/FriendCard";
+import { getLanguageFlag } from "../utils/languageUtils.jsx";
 import NoFriendsFound from "../components/NoFriendsFound";
 
 

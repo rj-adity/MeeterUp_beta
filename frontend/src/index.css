@@ -2,27 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-
+/* Stream Chat Theme Integration with DaisyUI */
 .str-chat__channel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(to bottom, #c9e8c9, #b7e7bb);
+  display: block;
+  background: hsl(var(--b1));
   height: 100%;
 }
 
 .str-chat__container {
   max-width: 1200px;
   width: 100%;
-  height: 80% !important;
+  height: 100% !important;
   margin: 0 auto !important;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   overflow: hidden;
+  background: hsl(var(--b1));
+  border: 1px solid hsl(var(--bc) / 0.2);
 }
 
 .str-chat__list {
-  background-color: #ffffff;
+  background-color: hsl(var(--b1));
   padding: 12px;
 }
 
@@ -31,5 +31,168 @@
 }
 
 .str-chat__message-input {
-  border-top: 1px solid #ddd;
+  border-top: 1px solid hsl(var(--bc) / 0.2);
+  background: hsl(var(--b1));
+}
+
+.str-chat__message-input__input {
+  background: hsl(var(--b2));
+  border: 1px solid hsl(var(--bc) / 0.2);
+  color: hsl(var(--bc));
+}
+
+.str-chat__message-input__input:focus {
+  border-color: hsl(var(--p));
+  box-shadow: 0 0 0 2px hsl(var(--p) / 0.2);
+}
+
+.str-chat__message {
+  background: hsl(var(--b2));
+  border: 1px solid hsl(var(--bc) / 0.1);
+  color: hsl(var(--bc));
+}
+
+.str-chat__message--received .str-chat__message-bubble {
+  background: hsl(var(--b2));
+  color: hsl(var(--bc));
+}
+
+.str-chat__message--sent .str-chat__message-bubble {
+  background: hsl(var(--p));
+  color: hsl(var(--pc));
+}
+
+.str-chat__channel-header {
+  background: hsl(var(--b1));
+  border-bottom: 1px solid hsl(var(--bc) / 0.2);
+  color: hsl(var(--bc));
+}
+
+.str-chat__channel-header__title {
+  color: hsl(var(--bc));
+}
+
+.str-chat__thread {
+  background: hsl(var(--b1));
+  border-left: 1px solid hsl(var(--bc) / 0.2);
+}
+
+/* Custom Stream Chat Styles */
+.str-chat__channel {
+  background: hsl(var(--b1));
+  color: hsl(var(--bc));
+}
+
+.str-chat__container {
+  background: hsl(var(--b1));
+  color: hsl(var(--bc));
+}
+
+.str-chat__list {
+  background: hsl(var(--b1));
+  color: hsl(var(--bc));
+  padding: 1rem;
+}
+
+.str-chat__message-input {
+  background: hsl(var(--b1));
+  color: hsl(var(--bc));
+  border-top: 1px solid hsl(var(--bc) / 0.2);
+}
+
+/* Remove dashed lines and improve header */
+.str-chat__channel-header {
+  display: none !important;
+}
+
+.str-chat__channel-header__title {
+  display: none !important;
+}
+
+/* Ensure our custom header is visible */
+.str-chat__channel {
+  position: relative !important;
+}
+
+.str-chat__channel > div:first-child {
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+/* Force visibility of custom elements */
+[class*="flex items-center justify-between p-4"] {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Remove any dashed borders */
+.str-chat__message-bubble {
+  border: none !important;
+  border-style: none !important;
+}
+
+.str-chat__message {
+  border: none !important;
+  border-style: none !important;
+}
+
+/* Ensure clean message display */
+.str-chat__message--me .str-chat__message-bubble {
+  max-width: 70% !important;
+  margin-left: auto !important;
+  border-radius: 18px 18px 4px 18px !important;
+  padding: 8px 12px !important;
+  background: hsl(var(--p)) !important;
+  color: hsl(var(--pc)) !important;
+}
+
+.str-chat__message--other .str-chat__message-bubble {
+  max-width: 70% !important;
+  margin-right: auto !important;
+  border-radius: 18px 18px 18px 4px !important;
+  padding: 8px 12px !important;
+  background: hsl(var(--b2)) !important;
+  color: hsl(var(--bc)) !important;
+}
+
+.str-chat__message-text {
+  word-break: break-word !important;
+  display: block !important;
+}
+
+.str-chat__message-data {
+  margin-top: 4px !important;
+  font-size: 0.75rem !important;
+  opacity: 0.7 !important;
+}
+
+/* Custom scrollbar */
+.str-chat__list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.str-chat__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.str-chat__list::-webkit-scrollbar-thumb {
+  background: hsl(var(--bc) / 0.3);
+  border-radius: 3px;
+}
+
+.str-chat__list::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--bc) / 0.5);
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .str-chat__message--me .str-chat__message-bubble,
+  .str-chat__message--other .str-chat__message-bubble {
+    max-width: 85% !important;
+  }
+  
+  .str-chat__list {
+    padding: 0.5rem;
+  }
 }

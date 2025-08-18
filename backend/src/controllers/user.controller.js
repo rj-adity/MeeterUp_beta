@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import { upsertStreamUser } from "../lib/stream.js";
 import FriendRequest from "../models/FriendRequest.js";
 
 export async function getRecommendedUsers(req, res) {
@@ -148,5 +149,52 @@ export async function getOutgoingFriendReqs(req, res) {
     } catch (error) {
         console.log("Error in getOutgoingFriendReqs controller", error.message);
         res.status(500).json({message: "Internal Server Error"});
+    }
+}
+
+export async function updateProfile(req, res) {
+    try {
+        const userId = req.user.id;
+        const {
+            fullName,
+            bio,
+            nativeLanguage,
+            learningLanguage,
+            location,
+            profilePic,
+        } = req.body;
+
+        const updateDoc = {};
+        if (typeof fullName === "string") updateDoc.fullName = fullName;
+        if (typeof bio === "string") updateDoc.bio = bio;
+        if (typeof nativeLanguage === "string") updateDoc.nativeLanguage = nativeLanguage;
+        if (typeof learningLanguage === "string") updateDoc.learningLanguage = learningLanguage;
+        if (typeof location === "string") updateDoc.location = location;
+        if (typeof profilePic === "string") updateDoc.profilePic = profilePic;
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            updateDoc,
+            { new: true }
+        ).select("-password");
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Sync Stream user profile so chat reflects latest name/image
+        try {
+            await upsertStreamUser({
+                id: updatedUser._id.toString(),
+                name: updatedUser.fullName,
+            });
+        } catch (streamError) {
+            console.log("Stream upsert failed in updateProfile:", streamError?.message || streamError);
+        }
+
+        res.status(200).json({ success: true, user: updatedUser });
+    } catch (error) {
+        console.log("Error in updateProfile controller", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
     }
 }

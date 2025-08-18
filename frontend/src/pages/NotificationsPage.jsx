@@ -2,9 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { acceptFriendRequest, getFriendRequests } from "../lib/api";
 import { BellIcon, ClockIcon, MessageSquareIcon, UserCheckIcon } from "lucide-react";
 import NoNotificationsFound from "../components/NoNotificationsFound";
+import { useMessageStore } from "../store/useMessageStore";
+import { useNavigate } from "react-router";
 
 const NotificationsPage = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { notifications, clearNotifications } = useMessageStore();
 
   const { data: friendRequests, isLoading } = useQuery({
     queryKey: ["friendRequests"],
@@ -22,10 +26,36 @@ const NotificationsPage = () => {
   const incomingRequests = friendRequests?.incomingReqs || [];
   const acceptedRequests = friendRequests?.acceptedReqs || [];
 
+  const formatTime = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return date.toLocaleDateString();
+  };
+
+  const handleMessageClick = (notification) => {
+    // Navigate to chat with the sender
+    navigate(`/chat/${notification.senderId}`);
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="container mx-auto max-w-4xl space-y-8">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-6">Notifications</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Notifications</h1>
+          {notifications.length > 0 && (
+            <button 
+              onClick={clearNotifications}
+              className="btn btn-ghost btn-sm"
+            >
+              Clear All
+            </button>
+          )}
+        </div>
 
         {isLoading ? (
           <div className="flex justify-center py-12">
@@ -33,6 +63,52 @@ const NotificationsPage = () => {
           </div>
         ) : (
           <>
+            {/* MESSAGE NOTIFICATIONS */}
+            {notifications.length > 0 && (
+              <section className="space-y-4">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <MessageSquareIcon className="h-5 w-5 text-primary" />
+                  New Messages
+                  <span className="badge badge-primary ml-2">{notifications.length}</span>
+                </h2>
+
+                <div className="space-y-3">
+                  {notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className="card bg-base-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => handleMessageClick(notification)}
+                    >
+                      <div className="card-body p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="avatar mt-1 size-12 rounded-full">
+                            <img
+                              src={notification.senderImage || `https://avatar.iran.liara.run/public/${Math.floor(Math.random() * 100) + 1}.png`}
+                              alt={notification.senderName}
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold truncate">{notification.senderName}</h3>
+                            <p className="text-sm my-1 text-base-content/80 truncate">
+                              {notification.message}
+                            </p>
+                            <p className="text-xs flex items-center opacity-70">
+                              <ClockIcon className="h-3 w-3 mr-1" />
+                              {formatTime(notification.timestamp)}
+                            </p>
+                          </div>
+                          <div className="badge badge-primary">
+                            <MessageSquareIcon className="h-3 w-3 mr-1" />
+                            New
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {incomingRequests.length > 0 && (
               <section className="space-y-4">
                 <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -122,7 +198,7 @@ const NotificationsPage = () => {
               </section>
             )}
 
-            {incomingRequests.length === 0 && acceptedRequests.length === 0 && (
+            {incomingRequests.length === 0 && acceptedRequests.length === 0 && notifications.length === 0 && (
               <NoNotificationsFound /> 
             ) }
           </>

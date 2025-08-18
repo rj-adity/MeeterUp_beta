@@ -4,19 +4,20 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "npm install --prefix backend  && npm install --prefix frontend && npm run build --prefix frontend",
-    "start" : "npm run start --prefix backend"
+    "build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
+    "start": "npm run start --prefix backend",
+    "vercel-build": "npm run build"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rj-adity/MeeterUp.git"
+    "url": "git+https://github.com/YOUR_USERNAME/YOUR_NEW_REPO.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/rj-adity/MeeterUp/issues"
+    "url": "https://github.com/YOUR_USERNAME/YOUR_NEW_REPO/issues"
   },
-  "homepage": "https://github.com/rj-adity/MeeterUp#readme"
+  "homepage": "https://github.com/YOUR_USERNAME/YOUR_NEW_REPO#readme"
 }

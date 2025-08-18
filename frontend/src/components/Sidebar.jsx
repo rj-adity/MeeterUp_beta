@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router"
 import useAuthUser from "../hooks/useAuthUser"
-import {BellIcon, HousePlus, PandaIcon, ShieldUser } from "lucide-react";
+import {BellIcon, HousePlus, PandaIcon, ShieldUser, Settings } from "lucide-react";
 
 
 const Sidebar = () => {
@@ -50,6 +50,16 @@ const Sidebar = () => {
             <BellIcon className="size-5 text-base-content opacity-70" />
             <span>Notifications</span>
             </Link>   
+
+            <Link 
+            to="/settings"
+            className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${
+                currentPath === "/settings" ? "btn-active" : ""
+            }`}
+            >
+            <Settings className="size-5 text-base-content opacity-70" />
+            <span>Settings</span>
+            </Link>
         </nav>
 
         {/* USER PROFILE SECTION */}
