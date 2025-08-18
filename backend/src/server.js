@@ -29,13 +29,29 @@ console.log("Server environment variables loaded:", {
 });
 
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 const __dirname = path.resolve();
 
+// CORS configuration for production
+const allowedOrigins = [
+    "http://localhost:5173",
+    "https://meeterup-beta-lnvpu7s28-rj-aditys-projects.vercel.app",
+    "https://meeterup-beta.vercel.app"
+];
+
 app.use(cors({
-    origin: "http://localhost:5173",
-    credentials: true, //allow frontend to send cookies
-}))
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
+}));
+
 // Increase body size limits to support base64 profile images
 app.use(express.json({ limit: "25mb" }));
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
@@ -56,20 +72,19 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
 
-// Serve frontend build if it exists (works in prod and dev after build)
-const distPath = path.join(__dirname, "../frontend/dist");
-if (fs.existsSync(distPath)) {
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-        res.sendFile(path.join(distPath, "index.html"));
-    });
-} else if (process.env.NODE_ENV !== "production") {
-    // In development, if no build is present, redirect root to Vite dev server
-    app.get("/", (req, res) => {
-        res.redirect("http://localhost:5173/");
+// API health check
+app.get("/api/health", (req, res) => {
+    res.json({ message: "MeeterUp API is running", status: "healthy" });
+});
+
+// For Vercel serverless functions
+if (process.env.NODE_ENV === "production") {
+    // Export for Vercel
+    module.exports = app;
+} else {
+    // Local development
+    app.listen(PORT, ()=> {
+        console.log(`Server is running on port ${PORT}` );
+        connectDB();
     });
 }
-app.listen(PORT, ()=> {
-    console.log(`Server is running on port ${PORT}` );
-    connectDB();
-})
