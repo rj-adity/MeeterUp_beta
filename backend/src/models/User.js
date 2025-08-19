@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs"
+import crypto from "crypto";
 
 const userSchema = new mongoose.Schema({
     fullName: {
@@ -40,6 +41,15 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    // Password reset fields
+    resetPasswordToken: {
+        type: String,
+        default: null
+    },
+    resetPasswordExpires: {
+        type: Date,
+        default: null
+    },
 
     friends: [
         {
@@ -71,6 +81,13 @@ userSchema.methods.matchPassword = async function(eneteredPassword){
     return isPasswordCorrect;
 };
 
+// Generate password reset token
+userSchema.methods.generatePasswordResetToken = function() {
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    this.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    this.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    return resetToken;
+};
 
 const User = mongoose.model("User", userSchema);
 export default User;

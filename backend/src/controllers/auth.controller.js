@@ -1,6 +1,7 @@
 import { upsertStreamUser } from "../lib/stream.js";
 import User from "../models/User.js"
 import jwt from "jsonwebtoken"
+import crypto from "crypto"
 
 export async function signup(req,res){
     const {email,password,fullName} = req.body;
@@ -65,6 +66,7 @@ export async function signup(req,res){
        res.status(500).json({message: "Internal Srver Error"}); 
     }
 }
+
 export async function login(req,res){
    try {
     const {email, password} = req.body;
@@ -98,9 +100,91 @@ export async function login(req,res){
     
    }
 }
+
 export function logout(req,res){
     res.clearCookie("jwt");
     res.status(200).json({success:true, message: "Sucessfully logged out"});
+}
+
+// Forgot password function
+export async function forgotPassword(req, res) {
+    try {
+        const { email } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({ message: "Email is required" });
+        }
+
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: "User with this email does not exist" });
+        }
+
+        // Generate reset token
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+        
+        // Save hashed token to user
+        user.resetPasswordToken = hashedToken;
+        user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+        await user.save();
+
+        // In a real app, you would send this token via email
+        // For now, we'll return it in the response (remove this in production)
+        res.status(200).json({ 
+            success: true, 
+            message: "Password reset token generated successfully",
+            resetToken: resetToken, // Remove this in production
+            expiresIn: "10 minutes"
+        });
+
+    } catch (error) {
+        console.error("Error in forgotPassword:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+}
+
+// Reset password function
+export async function resetPassword(req, res) {
+    try {
+        const { token, newPassword } = req.body;
+        
+        if (!token || !newPassword) {
+            return res.status(400).json({ message: "Token and new password are required" });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ message: "Password must be at least 6 characters" });
+        }
+
+        // Hash the token to compare with stored hash
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+        
+        // Find user with valid reset token
+        const user = await User.findOne({
+            resetPasswordToken: hashedToken,
+            resetPasswordExpires: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: "Invalid or expired reset token" });
+        }
+
+        // Update password and clear reset token
+        user.password = newPassword;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+
+        res.status(200).json({ 
+            success: true, 
+            message: "Password reset successfully" 
+        });
+
+    } catch (error) {
+        console.error("Error in resetPassword:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
 }
 
 export async function onboard(req, res) {

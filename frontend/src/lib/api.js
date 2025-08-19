@@ -13,6 +13,16 @@ export const logout = async () => {
     return  response.data;
 };
 
+// Password reset functions
+export const forgotPassword = async (email) => {
+    const response = await axiosInstance.post("/auth/forgot-password", { email });
+    return response.data;
+};
+
+export const resetPassword = async (token, newPassword) => {
+    const response = await axiosInstance.post("/auth/reset-password", { token, newPassword });
+    return response.data;
+};
 
 export const getAuthUser = async ()=> {
      try {

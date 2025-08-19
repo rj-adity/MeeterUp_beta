@@ -4,12 +4,14 @@ import  { useState } from 'react'
 // import { login } from '../lib/api.js';
 import { Link } from 'react-router';
 import useLogin from '../hooks/useLogin.js';
+import ForgotPassword from '../components/ForgotPassword';
 
 const LoginPage = () => {
   const [loginData, setLoginData] = useState({
     email: "",
     password: "",
   });
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   // const queryClient = useQueryClient();
 
@@ -23,6 +25,34 @@ const {isPending, error, loginMutation} = useLogin();
  const handleLogin =(e) => {
   e.preventDefault();
   loginMutation(loginData);
+ }
+
+ if (showForgotPassword) {
+   return (
+     <div className='h-screen flex items-center justify-center p-4 sm:p-6 md:p-8' data-theme ='forest'>
+       <div className='border border-primary/25 flex flex-col lg:flex-row w-full max-w-5xl mx-auto bg-base-100 rounded-xl shadow-lg overflow-hidden'>
+         <div className='w-full lg:w-1/2 p-4 sm:p-6 md:p-8 flex flex-col'>
+           <ForgotPassword onBack={() => setShowForgotPassword(false)} />
+         </div>
+         {/* IMAGE SECTION */}
+         <div className='hidden lg:flex w-full lg:w-1/2 bg-primary/10 items-center justify-center'>
+           <div className='max-w-md p-8'>
+             {/* ILLUSTRATION */}
+             <div className='relative aspect-square max-w-sm mx-auto'>
+               <img src="/i.png" alt="Language connection illustration" className='w-full h-full'/>
+             </div>
+
+             <div className='text-center space-y-3 mt-6'>
+               <h2 className='text-xl font-semibold'>Connect with adventurous partners worldwide</h2>
+               <p className='opacity-70'>
+                 Practice conversation, adventurous, make-friends and improve your communication skills with MeeterUp
+               </p>
+             </div>
+           </div>
+         </div>
+       </div>
+     </div>
+   );
  }
 
   return (
@@ -81,6 +111,17 @@ const {isPending, error, loginMutation} = useLogin();
                   onChange={(e) => setLoginData({...loginData, password: e.target.value})}
                   required
                   />             
+                </div>
+
+                {/* Forgot Password Link */}
+                <div className='text-right'>
+                  <button 
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className='text-sm text-primary hover:underline'
+                  >
+                    Forgot your password?
+                  </button>
                 </div>
 
                 <button type='submit' className='btn btn-primary w-full' disabled={isPending} >

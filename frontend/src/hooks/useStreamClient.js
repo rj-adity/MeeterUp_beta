@@ -4,12 +4,14 @@ import { useMessageStore } from '../store/useMessageStore';
 import useAuthUser from './useAuthUser';
 import { useQuery } from '@tanstack/react-query';
 import { getStreamToken } from '../lib/api';
+import { useThemeStore } from '../store/useThemeStore';
 
 const STREAM_API_KEY = import.meta.env.VITE_STREAM_API_KEY;
 
 export const useStreamClient = () => {
   const { authUser } = useAuthUser();
   const { incrementChannelUnread, setUnreadFromServer, addNotification } = useMessageStore();
+  const { theme } = useThemeStore();
   const clientRef = useRef(null);
 
   const { data: tokenData } = useQuery({
@@ -83,7 +85,7 @@ export const useStreamClient = () => {
       isMounted = false;
       client.disconnectUser();
     };
-  }, [authUser, tokenData?.token]);
+  }, [authUser, tokenData, theme]);
 
   return clientRef.current;
 };

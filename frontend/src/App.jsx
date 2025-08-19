@@ -9,6 +9,7 @@ import CallPage from './pages/CallPage.jsx';
 import ChatPage from './pages/ChatPage';
 import SettingsPage from './pages/SettingsPage.jsx';
 import OnboardingPage from './pages/OnboardingPage.jsx';
+import ResetPassword from './components/ResetPassword.jsx';
 import { Toaster } from 'react-hot-toast';
 import PageLoader from './components/PageLoader.jsx';
 import useAuthUser from './hooks/useAuthUser.js';
@@ -51,6 +52,10 @@ const App = () => {
       />
         <Route path="/login" element={
           !isAuthenticated ? <LoginPage /> : <Navigate to={isOnboarded ? "/" : "/onboarding"} />
+        }
+        />
+        <Route path="/reset-password" element={
+          !isAuthenticated ? <ResetPassword /> : <Navigate to={isOnboarded ? "/" : "/onboarding"} />
         }
         />
         <Route path="/settings" 

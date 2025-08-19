@@ -15,6 +15,7 @@ import { StreamChat } from "stream-chat";
 import ChatLoader from "../components/ChatLoader";
 import CallButton from "../components/CallButton";
 import toast from "react-hot-toast";
+import { useThemeStore } from "../store/useThemeStore";
 
 const STREAM_API_KEY = import.meta.env.VITE_STREAM_API_KEY
 
@@ -23,6 +24,7 @@ const ChatPage = () => {
   const [chatClient, setChatClient] = useState(null);
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { theme } = useThemeStore();
 
   const {authUser} = useAuthUser();
 
@@ -91,6 +93,22 @@ const ChatPage = () => {
 
   if(loading || !chatClient || !channel ) return <ChatLoader />;
 
+  // Stream Chat theme configuration based on current theme
+  const streamTheme = {
+    'light': 'light',
+    'dark': 'dark',
+    'forest': 'dark',
+    'synthwave': 'dark',
+    'cyberpunk': 'dark',
+    'retro': 'light',
+    'valentine': 'light',
+    'aqua': 'light',
+    'dracula': 'dark',
+    'night': 'dark',
+    'coffee': 'dark',
+    'winter': 'light'
+  };
+
   return (
     <div className="min-h-screen p-4 flex items-center justify-center" style={{ backgroundColor: `hsl(var(--b2))` }}>
       <div className="w-full max-w-4xl bg-base-100 rounded-lg shadow-lg flex flex-col h-[80vh]">
@@ -126,7 +144,7 @@ const ChatPage = () => {
 
         {/* Chat Content */}
         <div className="flex-1 min-h-0">
-          <Chat client={chatClient}>
+          <Chat client={chatClient} theme={streamTheme[theme] || 'light'}>
             <Channel channel={channel}>
               <Window>
                 <MessageList />

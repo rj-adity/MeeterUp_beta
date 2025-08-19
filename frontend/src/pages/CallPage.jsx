@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router"
 import useAuthUser from "../hooks/useAuthUser";
 import { useQuery } from "@tanstack/react-query";
 import { getStreamToken } from "../lib/api";
+import { useThemeStore } from "../store/useThemeStore";
 
 import {
   StreamVideo,
@@ -27,6 +28,7 @@ const CallPage = () => {
   const [client, setClient] = useState(null);
   const [call, setCall] = useState(null);
   const [isConnecting, setIsConnecting] = useState(true);
+  const { theme } = useThemeStore();
 
   const {authUser, isLoading} = useAuthUser();
   const {data: tokenData} = useQuery({
