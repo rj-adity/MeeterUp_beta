@@ -14,6 +14,9 @@ import ChatLoader from "../components/ChatLoader";
 import CallButton from "../components/CallButton";
 import toast from "react-hot-toast";
 import { useThemeStore } from "../store/useThemeStore";
+import { useMessageStore } from "../store/useMessageStore";
+import { getBlockedUsers } from "../lib/api";
+import { Mic, Square, Video as VideoIcon } from "lucide-react";
 
 const ChatPage = () => {
   const {id: targetUserId} = useParams();
@@ -24,6 +27,12 @@ const ChatPage = () => {
 
   const {authUser} = useAuthUser();
   const globalClient = useStreamClient();
+  const { resetChannelUnread, clearNotificationsBySender } = useMessageStore();
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioStream, setAudioStream] = useState(null);
+  const [audioChunks, setAudioChunks] = useState([]);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
 
   useEffect(()=> {
     const initChat = async () => {
@@ -66,6 +75,28 @@ const ChatPage = () => {
     };
   },[authUser, targetUserId, globalClient]);
 
+  // When on a chat, clear unread counts and notifications for that sender
+  useEffect(() => {
+    if (!channel || !targetUserId) return;
+    const channelId = channel.id;
+    resetChannelUnread(channelId);
+    clearNotificationsBySender(targetUserId);
+  }, [channel, targetUserId, resetChannelUnread, clearNotificationsBySender]);
+
+  // Check if target user is blocked by me
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const blocked = await getBlockedUsers();
+        if (mounted) {
+          setIsBlocked(Boolean(blocked?.some?.((u) => u._id === targetUserId)));
+        }
+      } catch {}
+    })();
+    return () => { mounted = false; };
+  }, [targetUserId]);
+
   const handleVideoCall = () => {
     if(channel) {
       const callUrl = `${window.location.origin}/call/${channel.id}`;
@@ -77,6 +108,85 @@ const ChatPage = () => {
       toast.success("Video call link sent successfully!")
     }
   }
+
+  const startRecording = async () => {
+    try {
+      if (!channel) return;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Pick the most compatible mime type available
+      const preferredTypes = [
+        "audio/webm;codecs=opus",
+        "audio/ogg;codecs=opus",
+        "audio/mp4",
+        "audio/mpeg",
+      ];
+      let selectedMime = "";
+      for (const t of preferredTypes) {
+        try {
+          if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) {
+            selectedMime = t;
+            break;
+          }
+        } catch {}
+      }
+      const recorder = selectedMime ? new MediaRecorder(stream, { mimeType: selectedMime }) : new MediaRecorder(stream);
+      const chunks = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+      recorder.onstop = async () => {
+        try {
+          const blobType = selectedMime || "audio/webm";
+          const blob = new Blob(chunks, { type: blobType });
+          let ext = "webm";
+          if (blobType.includes("ogg")) ext = "ogg";
+          else if (blobType.includes("mp4")) ext = "m4a";
+          else if (blobType.includes("mpeg")) ext = "mp3";
+          const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: blobType });
+          // Upload to Stream CDN
+          const upload = await channel.sendFile(file);
+          const fileUrl = upload?.file;
+          await channel.sendMessage({
+            text: "",
+            attachments: [
+              {
+                type: "audio",
+                asset_url: fileUrl,
+                title: file.name,
+                mime_type: blobType,
+              },
+            ],
+          });
+          toast.success("Voice message sent");
+        } catch (err) {
+          console.error("Error sending voice message", err);
+          toast.error("Failed to send voice message");
+        } finally {
+          setIsRecording(false);
+          setAudioChunks([]);
+          setMediaRecorder(null);
+          try { stream.getTracks().forEach((t) => t.stop()); } catch {}
+          setAudioStream(null);
+        }
+      };
+      setAudioStream(stream);
+      setAudioChunks(chunks);
+      setMediaRecorder(recorder);
+      recorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Mic permission / recording error", err);
+      toast.error("Microphone not available");
+    }
+  };
+
+  const stopRecording = () => {
+    try {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+      }
+    } catch {}
+  };
 
   if(loading || !chatClient || !channel ) return <ChatLoader />;
 
@@ -135,7 +245,41 @@ const ChatPage = () => {
             <Channel channel={channel}>
               <Window>
                 <MessageList messageActions={['react', 'reply']} />
-                <MessageInput focus disableVoiceRecording grow type="text" Input={undefined} />
+                {!isBlocked ? (
+                  <div className="relative">
+                    <MessageInput focus disableVoiceRecording grow type="text" />
+                    <div className="absolute right-2 bottom-2 flex items-center gap-2">
+                      {!isRecording ? (
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          title="Send voice message"
+                          onClick={startRecording}
+                        >
+                          <Mic className="h-5 w-5" />
+                        </button>
+                      ) : (
+                        <button
+                          className="btn btn-error btn-sm"
+                          title="Stop recording"
+                          onClick={stopRecording}
+                        >
+                          <Square className="h-5 w-5" />
+                        </button>
+                      )}
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        title="Start video call"
+                        onClick={handleVideoCall}
+                      >
+                        <VideoIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 text-center text-sm text-base-content/70 border-t border-base-300">
+                    You have blocked this user. Unblock to send messages.
+                  </div>
+                )}
               </Window>
               <Thread />
             </Channel>

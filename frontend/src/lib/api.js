@@ -69,6 +69,11 @@ export async function acceptFriendRequest(requestId){
     return response.data;
 }
 
+export async function cancelFriendRequest(requestId){
+    const response = await axiosInstance.delete(`/users/friend-request/${requestId}`);
+    return response.data;
+}
+
 export async function  getStreamToken() {
     const response = await axiosInstance.get("/chat/token");
     return response.data;
@@ -76,5 +81,26 @@ export async function  getStreamToken() {
 
 export async function updateProfile(payload){
     const response = await axiosInstance.put("/users/me", payload);
+    return response.data;
+}
+
+// Friends & blocking
+export async function unfriend(userId){
+    const response = await axiosInstance.delete(`/users/friends/${userId}`);
+    return response.data;
+}
+
+export async function blockUser(userId){
+    const response = await axiosInstance.post(`/users/block/${userId}`);
+    return response.data;
+}
+
+export async function unblockUser(userId){
+    const response = await axiosInstance.delete(`/users/block/${userId}`);
+    return response.data;
+}
+
+export async function getBlockedUsers(){
+    const response = await axiosInstance.get(`/users/blocked`);
     return response.data;
 }

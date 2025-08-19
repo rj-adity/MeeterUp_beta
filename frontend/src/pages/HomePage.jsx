@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { getOutgoingFriendReqs, getRecommendedUsers, getUserFriends, sendFriendRequest } from "../lib/api";
+import { getOutgoingFriendReqs, getRecommendedUsers, getUserFriends, sendFriendRequest, cancelFriendRequest } from "../lib/api";
 import {Link } from "react-router";
 import { CheckCircleIcon, MapPinIcon, User, UserPlusIcon, UsersIcon} from "lucide-react";
 import FriendCard from "../components/FriendCard";
@@ -12,6 +12,7 @@ import { useMessageStore } from "../store/useMessageStore";
 const HomePage = () => {
   const queryClient = useQueryClient();
   const [outgoingRequestsIds, setOutgoingRequestsIds] = useState(new Set())
+  const [outgoingRequestsMap, setOutgoingRequestsMap] = useState({})
 
   const {data: friends=[], isLoading: loadingFriends} = useQuery({
     queryKey: ["friends"],
@@ -36,13 +37,20 @@ const HomePage = () => {
 
   useEffect(() => {
     const outgoingIds = new Set();
+    const map = {};
     if(outgoingFriendReqs && outgoingFriendReqs.length > 0 ) {
       outgoingFriendReqs.forEach((req) => {
         outgoingIds.add(req.recipient._id)
+        map[req.recipient._id] = req._id;
       });
       setOutgoingRequestsIds(outgoingIds);
+      setOutgoingRequestsMap(map);
     }
   },[outgoingFriendReqs])
+  const { mutate: cancelRequestMutation, isPending: canceling } = useMutation({
+    mutationFn: cancelFriendRequest,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["outgoingFriendReqs"] }),
+  });
   const { notifications } = useMessageStore();
 
   return (
@@ -150,25 +158,30 @@ const HomePage = () => {
                       {user.bio && <p className="text-sm opacity-70" >{user.bio}</p>}
 
                       {/* Action Button */}
-                      <button
-                      className={`btn w-full mt-2 ${
-                        hasRequestBeenSent ? "btn-disabled" : "btn-primary"
-                      }`}
-                      onClick={()=> sendRequestMutation(user._id)}
-                      disabled={hasRequestBeenSent || isPending }
-                      >
-                        {hasRequestBeenSent ? (
-                          <>
-                          <CheckCircleIcon className="size-4 mr-2" />
-                          Request Sent
-                          </>
-                        ): (
-                          <>
+                      {!hasRequestBeenSent ? (
+                        <button
+                          className="btn btn-primary w-full mt-2"
+                          onClick={()=> sendRequestMutation(user._id)}
+                          disabled={isPending}
+                        >
                           <UserPlusIcon className="size-4 mr-2" />
                           Send Friend Request
-                          </>
-                        )}
-                      </button>
+                        </button>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          <div className="btn btn-ghost btn-disabled">
+                            <CheckCircleIcon className="size-4 mr-2" />
+                            Sent
+                          </div>
+                          <button
+                            className="btn btn-outline"
+                            onClick={() => cancelRequestMutation(outgoingRequestsMap[user._id])}
+                            disabled={canceling}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )

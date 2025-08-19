@@ -11,7 +11,11 @@ export async function getRecommendedUsers(req, res) {
         $and: [
             {_id: {$ne: currentUserId}}, //excluding logged in user from getting into recommendations list
             {_id: {$nin: currentUser.friends}}, //excluding the current users friend list which are already friend
-            {isOnboarded: true}
+            {isOnboarded: true},
+            // exclude users I have blocked
+            {_id: { $nin: currentUser.blockedUsers || [] }},
+            // exclude users who have blocked me
+            { blockedUsers: { $ne: currentUserId } },
         ]
       })
       res.status(200).json(recommendedUsers)
@@ -57,8 +61,16 @@ export async function sendFriendRequest(req, res){
             return res.status(400).json({message: "You are already friends with this user"});
         }
 
-        //checking if a request is already made or not.
+        // block checks
+        const iBlockedRecipient = (req.user.blockedUsers || []).some((u) => u.toString() === recipientId);
+        const recipientBlockedMe = (recipient.blockedUsers || []).some((u) => u.toString() === myId);
+        if (iBlockedRecipient || recipientBlockedMe) {
+            return res.status(403).json({ message: "Cannot send friend request due to blocking" });
+        }
+
+        //checking if a PENDING request is already made or not.
         const existingRequest = await FriendRequest.findOne({
+            status: "pending",
             $or: [
                 {sender:myId, recipient:recipientId},
                 {sender: recipientId, recipient:myId}
@@ -67,7 +79,7 @@ export async function sendFriendRequest(req, res){
         if(existingRequest){
             return res
             .status(400)
-            .json({message: "A Friend request already exists between you and this user"});
+            .json({message: "A pending friend request already exists between you and this user"});
         }
 
         const friendRequest = await FriendRequest.create({
@@ -97,6 +109,17 @@ export async function acceptFriendRequest(req, res) {
             return res.status(403).json({message: "You are not authorized to accept this request"});
         }
 
+        // Ensure neither side has blocked the other
+        const [senderUser, recipientUser] = await Promise.all([
+            User.findById(friendRequest.sender).select("blockedUsers"),
+            User.findById(friendRequest.recipient).select("blockedUsers"),
+        ]);
+        const blockedEitherWay = (senderUser.blockedUsers || []).some((u) => u.toString() === friendRequest.recipient.toString())
+           || (recipientUser.blockedUsers || []).some((u) => u.toString() === friendRequest.sender.toString());
+        if (blockedEitherWay) {
+            return res.status(403).json({ message: "Cannot accept request due to blocking" });
+        }
+
         friendRequest.status=  "accepted";
         await friendRequest.save();
 
@@ -116,6 +139,19 @@ export async function acceptFriendRequest(req, res) {
         console.log("Error in acceptFriendRequest controller", error.message);
         res.status(500).json({message: "Internal Server Error"});
         
+    }
+}
+
+// Return my blocked users list
+export async function getBlockedUsers(req, res) {
+    try {
+        const user = await User.findById(req.user.id)
+            .select("blockedUsers")
+            .populate("blockedUsers", "fullName profilePic");
+        return res.status(200).json(user.blockedUsers || []);
+    } catch (error) {
+        console.error("Error in getBlockedUsers controller", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
     }
 }
 
@@ -149,6 +185,109 @@ export async function getOutgoingFriendReqs(req, res) {
     } catch (error) {
         console.log("Error in getOutgoingFriendReqs controller", error.message);
         res.status(500).json({message: "Internal Server Error"});
+    }
+}
+
+// Cancel a pending friend request by request id (only sender can cancel)
+export async function cancelFriendRequest(req, res) {
+    try {
+        const { id: requestId } = req.params;
+        const request = await FriendRequest.findById(requestId);
+        if (!request) {
+            return res.status(404).json({ message: "Friend request not found" });
+        }
+        if (request.sender.toString() !== req.user.id) {
+            return res.status(403).json({ message: "You are not authorized to cancel this request" });
+        }
+        if (request.status !== "pending") {
+            return res.status(400).json({ message: "Only pending requests can be cancelled" });
+        }
+        await FriendRequest.findByIdAndDelete(requestId);
+        return res.status(200).json({ success: true });
+    } catch (error) {
+        console.error("Error in cancelFriendRequest controller", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+}
+
+// Remove a friend relationship for both users
+export async function unfriend(req, res) {
+    try {
+        const myId = req.user.id;
+        const { id: friendId } = req.params;
+
+        if (myId === friendId) {
+            return res.status(400).json({ message: "You cannot unfriend yourself" });
+        }
+
+        const [me, friend] = await Promise.all([
+            User.findByIdAndUpdate(myId, { $pull: { friends: friendId } }, { new: true }).select("_id friends"),
+            User.findByIdAndUpdate(friendId, { $pull: { friends: myId } }, { new: true }).select("_id friends"),
+        ]);
+
+        if (!friend) {
+            return res.status(404).json({ message: "Friend not found" });
+        }
+
+        // Remove any friend request records between the two users (pending or accepted)
+        await FriendRequest.deleteMany({
+            $or: [
+                { sender: myId, recipient: friendId },
+                { sender: friendId, recipient: myId },
+            ],
+        });
+
+        return res.status(200).json({ success: true });
+    } catch (error) {
+        console.error("Error in unfriend controller", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+}
+
+// Block a user: add to my block list and also remove from friends if present
+export async function blockUser(req, res) {
+    try {
+        const myId = req.user.id;
+        const { id: targetId } = req.params;
+
+        if (myId === targetId) {
+            return res.status(400).json({ message: "You cannot block yourself" });
+        }
+
+        const target = await User.findById(targetId).select("_id");
+        if (!target) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Add to blockedUsers and ensure not in friends
+        await Promise.all([
+            User.findByIdAndUpdate(myId, {
+                $addToSet: { blockedUsers: targetId },
+                $pull: { friends: targetId },
+            }),
+            User.findByIdAndUpdate(targetId, {
+                $pull: { friends: myId },
+            }),
+        ]);
+
+        return res.status(200).json({ success: true });
+    } catch (error) {
+        console.error("Error in blockUser controller", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+}
+
+// Unblock a user
+export async function unblockUser(req, res) {
+    try {
+        const myId = req.user.id;
+        const { id: targetId } = req.params;
+
+        await User.findByIdAndUpdate(myId, { $pull: { blockedUsers: targetId } });
+        return res.status(200).json({ success: true });
+    } catch (error) {
+        console.error("Error in unblockUser controller", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
     }
 }
 

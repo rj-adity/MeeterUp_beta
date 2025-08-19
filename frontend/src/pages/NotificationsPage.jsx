@@ -14,7 +14,8 @@ const NotificationsPage = () => {
   // Reset unread counter when opening the notifications page
   useEffect(() => {
     clearAllUnread();
-  }, [clearAllUnread]);
+    clearNotifications();
+  }, [clearAllUnread, clearNotifications]);
 
   const { data: friendRequests, isLoading } = useQuery({
     queryKey: ["friendRequests"],

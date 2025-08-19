@@ -34,6 +34,11 @@ export const useMessageStore = create((set, get) => ({
 
   clearNotifications: () => set({ notifications: [] }),
 
+  clearNotificationsBySender: (senderId) => {
+    const filtered = (get().notifications || []).filter(n => n.senderId !== senderId);
+    set({ notifications: filtered });
+  },
+
   clearAllUnread: () => set({ channelUnreadMap: {}, totalUnread: 0 }),
 }));
 

@@ -2,9 +2,50 @@ import { Link } from "react-router";
 import { LANGUAGE_TO_FLAG } from "../constants";
 import { useMessageStore } from "../store/useMessageStore";
 import { getLanguageFlag } from "../utils/languageUtils.jsx";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { blockUser, unblockUser, unfriend, getBlockedUsers } from "../lib/api";
+import { useEffect, useState } from "react";
 
 const FriendCard = ({friend}) => {
   const { notifications } = useMessageStore();
+  const queryClient = useQueryClient();
+  const [isBlocked, setIsBlocked] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const blocked = await getBlockedUsers();
+        if (mounted) {
+          setIsBlocked(Boolean(blocked?.some?.((u) => u._id === friend._id)));
+        }
+      } catch {}
+    })();
+    return () => { mounted = false; };
+  }, [friend._id]);
+
+  const { mutate: unfriendMut, isPending: unfriending } = useMutation({
+    mutationFn: () => unfriend(friend._id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+    }
+  });
+
+  const { mutate: blockMut, isPending: blocking } = useMutation({
+    mutationFn: () => blockUser(friend._id),
+    onSuccess: () => {
+      setIsBlocked(true);
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+    }
+  });
+
+  const { mutate: unblockMut, isPending: unblocking } = useMutation({
+    mutationFn: () => unblockUser(friend._id),
+    onSuccess: () => {
+      setIsBlocked(false);
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+    }
+  });
   
   // Count notifications for this specific friend
   const friendNotifications = notifications.filter(
@@ -42,9 +83,23 @@ const FriendCard = ({friend}) => {
                 </span>
             </div>
 
-            <Link to= {`/chat/${friend._id}`} className="btn btn-outline w-full" >
-            Message
-            </Link>
+            <div className="grid grid-cols-3 gap-2">
+              <Link to= {`/chat/${friend._id}`} className="btn btn-outline btn-sm col-span-2" >
+                Message
+              </Link>
+              <button className="btn btn-outline btn-error btn-sm" disabled={unfriending} onClick={() => unfriendMut()}>
+                Unfriend
+              </button>
+              {!isBlocked ? (
+                <button className="btn btn-outline btn-warning btn-sm col-span-3" disabled={blocking} onClick={() => blockMut()}>
+                  Block
+                </button>
+              ) : (
+                <button className="btn btn-outline btn-success btn-sm col-span-3" disabled={unblocking} onClick={() => unblockMut()}>
+                  Unblock
+                </button>
+              )}
+            </div>
         </div>
     </div>
   )
