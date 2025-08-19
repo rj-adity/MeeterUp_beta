@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StreamChat } from 'stream-chat';
 import { useMessageStore } from '../store/useMessageStore';
 import useAuthUser from './useAuthUser';
@@ -13,6 +13,7 @@ export const useStreamClient = () => {
   const { incrementChannelUnread, setUnreadFromServer, addNotification } = useMessageStore();
   const { theme } = useThemeStore();
   const clientRef = useRef(null);
+  const [connectedClient, setConnectedClient] = useState(null);
 
   const { data: tokenData } = useQuery({
     queryKey: ['streamToken'],
@@ -28,8 +29,13 @@ export const useStreamClient = () => {
     clientRef.current = client;
 
     const connect = async () => {
+      // Avoid reconnect if already connected as the same user
+      if (client.userID === authUser._id) {
+        setConnectedClient(client);
+        return;
+      }
+
       console.log("Connecting to Stream with user:", { id: authUser._id, name: authUser.fullName });
-      
       await client.connectUser(
         { id: authUser._id, name: authUser.fullName },
         tokenData.token
@@ -48,6 +54,7 @@ export const useStreamClient = () => {
       if (isMounted) setUnreadFromServer(channelIdToCount);
 
       // Listen for new messages
+      client.off('message.new');
       client.on('message.new', async (event) => {
         const channelId = event?.cid?.split(':')[1];
         const messageUserId = event?.user?.id;
@@ -77,17 +84,19 @@ export const useStreamClient = () => {
           console.log('Error creating notification:', error);
         }
       });
+      setConnectedClient(client);
     };
 
     connect();
 
+    // Do not disconnect on theme change; only when app truly unmounts
     return () => {
       isMounted = false;
-      client.disconnectUser();
+      // Intentionally not disconnecting here to avoid tearing down global client
     };
-  }, [authUser, tokenData, theme]);
+  }, [authUser?._id, tokenData?.token]);
 
-  return clientRef.current;
+  return connectedClient;
 };
 
 

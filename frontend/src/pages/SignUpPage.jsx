@@ -1,5 +1,5 @@
 import  { useState } from 'react'
-import {PandaIcon} from 'lucide-react'
+import {PandaIcon, Eye, EyeOff} from 'lucide-react'
 import { Link } from 'react-router';
 // import { useMutation, useQueryClient } from '@tanstack/react-query';
 import useSignup from '../hooks/useSignup';
@@ -10,6 +10,7 @@ const [signupData, setSignupData] = useState({
   email: "",
   password: "",
 });
+const [showPassword, setShowPassword] = useState(false);
 // const queryClient = useQueryClient();
 
 // const {mutate: SignupMutation, isPending, error} = useMutation({
@@ -85,14 +86,25 @@ return(
               <label className='label'>
                 <span className='label-text'>Password</span>
               </label>
-              <input type="password"
-               placeholder='*********'
-               className='input input-bordered w-full'
-               value={signupData.password}
-               onChange={(e) => setSignupData({...signupData, password: e.target.value})}
-               required
-               minLength={6}
-              />
+              <div className="relative">
+                <input 
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder='*********'
+                  className='input input-bordered w-full pr-10'
+                  value={signupData.password}
+                  onChange={(e) => setSignupData({...signupData, password: e.target.value})}
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  className="btn btn-ghost btn-xs absolute right-2 top-1/2 -translate-y-1/2"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               <p className='text-xs opacity-70 mt-1'>
                 Password must be at least 6 characters long
               </p>

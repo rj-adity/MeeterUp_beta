@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import useAuthUser from "../hooks/useAuthUser";
-import { useQuery } from "@tanstack/react-query";
-import { getStreamToken } from "../lib/api";
+import { useStreamClient } from "../hooks/useStreamClient";
 import {
   Channel,
   Chat,
@@ -11,13 +10,10 @@ import {
   Thread,
   Window,
 } from "stream-chat-react";
-import { StreamChat } from "stream-chat";
 import ChatLoader from "../components/ChatLoader";
 import CallButton from "../components/CallButton";
 import toast from "react-hot-toast";
 import { useThemeStore } from "../store/useThemeStore";
-
-const STREAM_API_KEY = import.meta.env.VITE_STREAM_API_KEY
 
 const ChatPage = () => {
   const {id: targetUserId} = useParams();
@@ -27,40 +23,33 @@ const ChatPage = () => {
   const { theme } = useThemeStore();
 
   const {authUser} = useAuthUser();
-
-  const {data : tokenData} = useQuery({
-    queryKey: ["streamToken"],
-    queryFn: getStreamToken,
-    enabled: !!authUser // this will run only when authUser is available
-  });
+  const globalClient = useStreamClient();
 
   useEffect(()=> {
     const initChat = async () => {
-      if(!tokenData?.token  || !authUser) {
-        console.log("Waiting for token or authUser:", { hasToken: !!tokenData?.token, hasAuthUser: !!authUser });
+      // Wait for auth and global client to be ready and connected
+      if(!authUser || !globalClient || globalClient.userID !== authUser._id) {
+        console.log("Waiting for global Stream client connection", {
+          hasAuthUser: !!authUser,
+          hasClient: !!globalClient,
+          userId: globalClient?.userID
+        });
         return;
       }
 
       try {
-        console.log("Initialising stream chat client...")
-
-        const client = StreamChat.getInstance(STREAM_API_KEY);
-
-        await client.connectUser({
-          id: authUser._id,
-          name: authUser.fullName,
-        }, tokenData.token);
+        console.log("Initialising channel on existing Stream client...")
 
         const channelId = [authUser._id, targetUserId].sort().join("_");
 
         //Create a channel 
-        const currChannel = client.channel("messaging", channelId, {
+        const currChannel = globalClient.channel("messaging", channelId, {
           members: [authUser._id, targetUserId],
         });
         
         await currChannel.watch();
         
-        setChatClient(client);
+        setChatClient(globalClient);
         setChannel(currChannel);
       } catch (error) {
         console.error("Error initializing stream chat client", error);
@@ -71,13 +60,11 @@ const ChatPage = () => {
     }
     initChat();
     
-    // Cleanup function to disconnect client when component unmounts
+    // Cleanup: do not disconnect the global client; just stop using channel
     return () => {
-      if (chatClient) {
-        chatClient.disconnectUser();
-      }
+      // no-op; Stream handles channel listeners internally when component unmounts
     };
-  },[tokenData, authUser, targetUserId]);
+  },[authUser, targetUserId, globalClient]);
 
   const handleVideoCall = () => {
     if(channel) {
@@ -110,12 +97,12 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="min-h-screen p-4 flex items-center justify-center" style={{ backgroundColor: `hsl(var(--b2))` }}>
-      <div className="w-full max-w-4xl bg-base-100 rounded-lg shadow-lg flex flex-col h-[80vh]">
+    <div className="min-h-screen p-2 sm:p-4 flex items-center justify-center" style={{ backgroundColor: `hsl(var(--b2))` }}>
+      <div className="w-full max-w-4xl bg-base-100 rounded-none sm:rounded-lg shadow-none sm:shadow-lg flex flex-col h-[100vh] sm:h-[85vh]">
         {/* Custom Header - Outside of Stream Chat components */}
-        <div className="flex items-center justify-between p-4 border-b border-base-300 shrink-0 bg-base-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b border-base-300 shrink-0 bg-base-100">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden flex items-center justify-center">
               {channel?.state?.members?.[targetUserId]?.user?.image ? (
                 <img 
                   src={channel.state.members[targetUserId].user.image} 
@@ -130,11 +117,11 @@ const ChatPage = () => {
               )}
             </div>
             <div>
-              <h2 className="font-semibold text-lg text-base-content">
+              <h2 className="font-semibold text-base sm:text-lg text-base-content">
                 {channel?.state?.members?.[targetUserId]?.user?.name || 
                  `User ${targetUserId?.slice(-4) || ''}`}
               </h2>
-              <p className="text-sm text-base-content/70">2 members, 2 online</p>
+              <p className="text-xs sm:text-sm text-base-content/70">2 members, 2 online</p>
             </div>
           </div>
           <div className="flex items-center">
@@ -147,8 +134,8 @@ const ChatPage = () => {
           <Chat client={chatClient} theme={streamTheme[theme] || 'light'}>
             <Channel channel={channel}>
               <Window>
-                <MessageList />
-                <MessageInput focus disableVoiceRecording />
+                <MessageList messageActions={['react', 'reply']} />
+                <MessageInput focus disableVoiceRecording grow type="text" Input={undefined} />
               </Window>
               <Thread />
             </Channel>

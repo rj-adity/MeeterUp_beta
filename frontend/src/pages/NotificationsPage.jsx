@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { acceptFriendRequest, getFriendRequests } from "../lib/api";
 import { BellIcon, ClockIcon, MessageSquareIcon, UserCheckIcon } from "lucide-react";
 import NoNotificationsFound from "../components/NoNotificationsFound";
@@ -8,7 +9,12 @@ import { useNavigate } from "react-router";
 const NotificationsPage = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { notifications, clearNotifications } = useMessageStore();
+  const { notifications, clearNotifications, clearAllUnread } = useMessageStore();
+
+  // Reset unread counter when opening the notifications page
+  useEffect(() => {
+    clearAllUnread();
+  }, [clearAllUnread]);
 
   const { data: friendRequests, isLoading } = useQuery({
     queryKey: ["friendRequests"],

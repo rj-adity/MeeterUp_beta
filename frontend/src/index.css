@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global readability tweaks based on color mode */
+:root[data-color-mode="dark"] {
+  color: hsl(var(--pc));
+  background-color: hsl(var(--b1));
+}
+
+:root[data-color-mode="light"] {
+  color: hsl(var(--bc));
+  background-color: hsl(var(--b1));
+}
+
 /* Minimal custom overrides for Stream Chat */
 .str-chat {
   --str-chat__primary-color: hsl(var(--p));
@@ -26,6 +37,27 @@
   --str-chat__message-bubble-color-other-text: hsl(var(--bc));
 }
 
+/* Improve readability by inverting tones per theme */
+:root[data-color-mode="dark"] .str-chat {
+  --str-chat__primary-text-color: hsl(var(--pc));
+  --str-chat__secondary-text-color: hsl(var(--pc) / 0.8);
+  --str-chat__tertiary-text-color: hsl(var(--pc) / 0.6);
+  --str-chat__message-bubble-color-other: hsl(var(--b3));
+  --str-chat__message-bubble-color-other-text: hsl(var(--pc));
+  --str-chat__message-bubble-color-me: hsl(var(--p));
+  --str-chat__message-bubble-color-me-text: hsl(var(--pc));
+}
+
+:root[data-color-mode="light"] .str-chat {
+  --str-chat__primary-text-color: hsl(var(--bc));
+  --str-chat__secondary-text-color: hsl(var(--bc) / 0.7);
+  --str-chat__tertiary-text-color: hsl(var(--bc) / 0.5);
+  --str-chat__message-bubble-color-other: hsl(var(--b2));
+  --str-chat__message-bubble-color-other-text: hsl(var(--bc));
+  --str-chat__message-bubble-color-me: hsl(var(--p));
+  --str-chat__message-bubble-color-me-text: hsl(var(--pc));
+}
+
 /* Fix text breaking issues with proper word wrapping */
 .str-chat__message-text {
   word-break: break-word !important;
@@ -34,6 +66,80 @@
   white-space: pre-wrap !important;
   line-height: 1.4 !important;
   max-width: 100% !important;
+}
+
+/* Force readable message text by theme */
+:root[data-color-mode="dark"] .str-chat__message-text,
+:root[data-color-mode="dark"] .str-chat__message-text *,
+:root[data-color-mode="dark"] .str-chat__message-text-inner {
+  color: hsl(var(--pc)) !important;
+}
+
+/* Ensure ALL message content is visible in dark mode */
+:root[data-color-mode="dark"] .str-chat .str-chat__message-simple-text-inner,
+:root[data-color-mode="dark"] .str-chat .str-chat__message-simple__text,
+:root[data-color-mode="dark"] .str-chat .str-chat__message-bubble-content,
+:root[data-color-mode="dark"] .str-chat .str-chat__message-bubble-content *,
+:root[data-color-mode="dark"] .str-chat .str-chat__message-text > *,
+:root[data-color-mode="dark"] .str-chat .str-chat__message-replies,
+:root[data-color-mode="dark"] .str-chat .str-chat__date-separator,
+:root[data-color-mode="dark"] .str-chat .str-chat__message-simple__author,
+:root[data-color-mode="dark"] .str-chat .str-chat__message-simple__timestamp {
+  color: hsl(var(--pc)) !important;
+}
+
+/* Links inside messages in dark mode */
+:root[data-color-mode="dark"] .str-chat .str-chat__message-text a {
+  color: hsl(var(--p)) !important;
+  text-decoration: underline;
+}
+
+:root[data-color-mode="light"] .str-chat__message-text,
+:root[data-color-mode="light"] .str-chat__message-text *,
+:root[data-color-mode="light"] .str-chat__message-text-inner {
+  color: hsl(var(--bc)) !important;
+}
+
+/* Ensure ALL message content is visible in light mode */
+:root[data-color-mode="light"] .str-chat .str-chat__message-simple-text-inner,
+:root[data-color-mode="light"] .str-chat .str-chat__message-simple__text,
+:root[data-color-mode="light"] .str-chat .str-chat__message-bubble-content,
+:root[data-color-mode="light"] .str-chat .str-chat__message-bubble-content *,
+:root[data-color-mode="light"] .str-chat .str-chat__message-text > *,
+:root[data-color-mode="light"] .str-chat .str-chat__message-replies,
+:root[data-color-mode="light"] .str-chat .str-chat__date-separator,
+:root[data-color-mode="light"] .str-chat .str-chat__message-simple__author,
+:root[data-color-mode="light"] .str-chat .str-chat__message-simple__timestamp {
+  color: hsl(var(--bc)) !important;
+}
+
+/* Links inside messages in light mode */
+:root[data-color-mode="light"] .str-chat .str-chat__message-text a {
+  color: hsl(var(--p)) !important;
+  text-decoration: underline;
+}
+
+/* Extra dark-mode readability overrides for Stream components */
+/* Remove generic overrides to let inputs follow the selected theme */
+
+/* Timestamps, date separators, and minor labels */
+:root[data-color-mode="dark"] .str-chat [class*="timestamp"],
+:root[data-color-mode="dark"] .str-chat .str-chat__date-separator,
+:root[data-color-mode="dark"] .str-chat .str-chat__message-simple__actions {
+  color: hsl(var(--pc) / 0.7) !important;
+}
+
+/* Make other-party bubbles a bit lighter for contrast in dark mode */
+:root[data-color-mode="dark"] .str-chat .str-chat__message-bubble {
+  /* Slightly lighter bubble in dark themes for better contrast */
+  background-color: hsl(var(--b2)) !important;
+  border-color: hsl(var(--pc) / 0.08) !important;
+}
+
+/* Ensure bubble content is readable */
+:root[data-color-mode="dark"] .str-chat .str-chat__message-bubble-content,
+:root[data-color-mode="dark"] .str-chat .str-chat__message-text-inner {
+  color: hsl(var(--pc)) !important;
 }
 
 /* Ensure message bubbles handle long text properly */

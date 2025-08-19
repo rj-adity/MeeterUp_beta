@@ -1,10 +1,12 @@
 import { Link, useLocation } from "react-router"
 import useAuthUser from "../hooks/useAuthUser"
 import {BellIcon, HousePlus, PandaIcon, ShieldUser, Settings } from "lucide-react";
+import { useMessageStore } from "../store/useMessageStore";
 
 
 const Sidebar = () => {
     const {authUser} = useAuthUser();
+    const { totalUnread } = useMessageStore();
     const location = useLocation();
     const currentPath = location.pathname;
 
@@ -47,7 +49,14 @@ const Sidebar = () => {
                 currentPath === "/notification" ? "btn-active" : ""
             }`}
             >
-            <BellIcon className="size-5 text-base-content opacity-70" />
+            <div className="relative">
+              <BellIcon className="size-5 text-base-content opacity-70" />
+              {totalUnread > 0 && (
+                <span className="badge badge-primary badge-xs absolute -top-2 -right-3">
+                  {totalUnread}
+                </span>
+              )}
+            </div>
             <span>Notifications</span>
             </Link>   
 
