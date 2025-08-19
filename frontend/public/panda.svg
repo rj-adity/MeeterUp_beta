@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#4fc3c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Outline ears -->
+  <circle cx="6.5" cy="5.2" r="2.6" />
+  <circle cx="17.5" cy="5.2" r="2.6" />
+  <!-- Head outline -->
+  <circle cx="12" cy="13" r="7.6" />
+
+  <!-- Cute diagonal eyes -->
+  <path d="M9.2 11.4l-1.2 1.2" />
+  <path d="M14.8 11.4l1.2 1.2" />
+
+  <!-- Nose + smile -->
+  <path d="M12 13.9v.1" />
+  <path d="M9.6 16c1.2.9 3.6.9 4.8 0" />
+</svg>

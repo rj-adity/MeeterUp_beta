@@ -97,8 +97,8 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="min-h-screen p-2 sm:p-4 flex items-center justify-center" style={{ backgroundColor: `hsl(var(--b2))` }}>
-      <div className="w-full max-w-4xl bg-base-100 rounded-none sm:rounded-lg shadow-none sm:shadow-lg flex flex-col h-[100vh] sm:h-[85vh]">
+    <div className="min-h-[100dvh] p-2 sm:p-4 flex items-center justify-center" style={{ backgroundColor: `hsl(var(--b2))` }}>
+      <div className="w-full max-w-4xl bg-base-100 rounded-none sm:rounded-lg shadow-none sm:shadow-lg flex flex-col h-[100dvh] sm:h-[85vh]">
         {/* Custom Header - Outside of Stream Chat components */}
         <div className="flex items-center justify-between p-3 sm:p-4 border-b border-base-300 shrink-0 bg-base-100">
           <div className="flex items-center gap-2 sm:gap-3">
