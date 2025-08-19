@@ -6,6 +6,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { blockUser, unblockUser, unfriend, getBlockedUsers } from "../lib/api";
 import { useEffect, useState } from "react";
 
+const MAX_PINNED_FRIENDS = 5;
+
 const FriendCard = ({friend}) => {
   const { notifications } = useMessageStore();
   const queryClient = useQueryClient();
@@ -47,10 +49,29 @@ const FriendCard = ({friend}) => {
     }
   });
   
+  const [showButtons, setShowButtons] = useState(false);
+
+  const [pinnedFriends, setPinnedFriends] = useState(() => {
+    const savedPinnedFriends = localStorage.getItem("pinnedFriends");
+    return savedPinnedFriends ? JSON.parse(savedPinnedFriends) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("pinnedFriends", JSON.stringify(pinnedFriends));
+  }, [pinnedFriends]);
+
+  const toggleButtons = () => {
+    setShowButtons(!showButtons);
+  };
+
+  const togglePin = () => {
+    if (pinnedFriends.includes(friend._id)) {
+      setPinnedFriends(pinnedFriends.filter(id => id !== friend._id));
+    } else if (pinnedFriends.length < MAX_PINNED_FRIENDS) {
+      setPinnedFriends([...pinnedFriends, friend._id]);
+    }
+  };
   // Count notifications for this specific friend
-  const friendNotifications = notifications.filter(
-    notification => notification.senderId === friend._id
-  );
   const unreadCount = friendNotifications.length;
 
   return (
@@ -58,7 +79,7 @@ const FriendCard = ({friend}) => {
         <div className="card-body p-4" >
             {/* USER INFO */}
             <div className="flex items-center gap-3 mb-3" >
-                <div className="avatar relative">
+                <div className="avatar relative cursor-pointer" onClick={toggleButtons}>
                     <div className="w-12 h-12 rounded-full overflow-hidden">
                         <img src={friend.profilePic} alt={friend.fullName} />
                     </div>
@@ -83,22 +104,30 @@ const FriendCard = ({friend}) => {
                 </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              <Link to= {`/chat/${friend._id}`} className="btn btn-outline btn-sm col-span-2" >
+            {showButtons && (
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                <Link to= {`/chat/${friend._id}`} className="btn btn-outline btn-sm col-span-3" >
                 Message
               </Link>
               <button className="btn btn-outline btn-error btn-sm" disabled={unfriending} onClick={() => unfriendMut()}>
                 Unfriend
               </button>
+              <button className="btn btn-outline btn-info btn-sm" onClick={togglePin} disabled={!pinnedFriends.includes(friend._id) && pinnedFriends.length >= MAX_PINNED_FRIENDS}>
+                {pinnedFriends.includes(friend._id) ? "Unpin" : "Pin"}
+              </button>
               {!isBlocked ? (
-                <button className="btn btn-outline btn-warning btn-sm col-span-3" disabled={blocking} onClick={() => blockMut()}>
-                  Block
+                <button className="btn btn-outline btn-warning btn-sm col-span-1" disabled={blocking} onClick={() => blockMut()}>
+                    Block
                 </button>
-              ) : (
-                <button className="btn btn-outline btn-success btn-sm col-span-3" disabled={unblocking} onClick={() => unblockMut()}>
+                    ) : (
+                        <button className="btn btn-outline btn-success btn-sm col-span-1" disabled={unblocking} onClick={() => unblockMut()}>
                   Unblock
                 </button>
-              )}
+                    )}
+
+              
+            </div>
+            )}
             </div>
         </div>
     </div>

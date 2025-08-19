@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router"
-import useAuthUser from "../hooks/useAuthUser"
+import useAuthUser from "../hooks/useAuthUser";
 import {BellIcon, HousePlus, PandaIcon, ShieldUser, Settings } from "lucide-react";
 import { useMessageStore } from "../store/useMessageStore";
 
@@ -70,6 +70,15 @@ const Sidebar = () => {
             <span>Settings</span>
             </Link>
         </nav>
+        
+        {/* Create Group Button */}
+        <div className="p-4">
+            <Link
+                to="/create-group" // Or handle this with a modal
+                className="btn btn-primary w-full normal-case"
+            >Create Group
+            </Link>
+        </div>
 
         {/* USER PROFILE SECTION */}
         <div className="p-4 border-t border-base-300 mt-auto" >  
