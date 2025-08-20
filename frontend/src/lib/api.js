@@ -104,3 +104,8 @@ export async function getBlockedUsers(){
     const response = await axiosInstance.get(`/users/blocked`);
     return response.data;
 }
+
+export async function getUserConversations(userId) {
+    const response = await axiosInstance.get(`/users/${userId}/conversations`);
+    return response.data;
+}

@@ -1,6 +1,6 @@
 import express from "express";
 import { protectRoute } from "../middleware/auth.middleware.js";
-import { acceptFriendRequest, getFriendRequests, getMyFriends, getOutgoingFriendReqs, getRecommendedUsers, sendFriendRequest, updateProfile, unfriend, blockUser, unblockUser, getBlockedUsers, cancelFriendRequest } from "../controllers/user.controller.js";
+import { acceptFriendRequest, getFriendRequests, getMyFriends, getOutgoingFriendReqs, getRecommendedUsers, sendFriendRequest, updateProfile, unfriend, blockUser, unblockUser, getBlockedUsers, cancelFriendRequest, getUserConversations } from "../controllers/user.controller.js";
 
 
 const router = express.Router();
@@ -26,5 +26,8 @@ router.delete("/block/:id", unblockUser);
 
 // profile
 router.put("/me", updateProfile);
+
+// conversations
+router.get("/:userId/conversations", getUserConversations);
 
 export default router;

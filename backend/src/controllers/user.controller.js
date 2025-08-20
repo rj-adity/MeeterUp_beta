@@ -1,6 +1,8 @@
 import User from "../models/User.js";
 import { upsertStreamUser } from "../lib/stream.js";
 import FriendRequest from "../models/FriendRequest.js";
+import streamClient from "../lib/stream.js"; // Assuming streamClient is exported
+import Conversation from "../models/Conversation.js"; // Assuming Conversation model exists
 
 export async function getRecommendedUsers(req, res) {
     try {
@@ -151,6 +153,55 @@ export async function getBlockedUsers(req, res) {
         return res.status(200).json(user.blockedUsers || []);
     } catch (error) {
         console.error("Error in getBlockedUsers controller", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+}
+
+export async function getUserConversations(req, res) {
+    try {
+        const userId = req.user.id;
+        const streamUserId = userId; // Stream User ID is the same as MongoDB User ID
+
+        // 1. Fetch group conversations from MongoDB
+        const groupConversations = await Conversation.find({
+            members: userId,
+            isGroup: true,
+        }).populate("members", "fullName profilePic"); // Populate members to get user details
+
+        // Format MongoDB group conversations
+        const formattedGroupConversations = groupConversations.map(convo => ({
+            id: convo._id.toString(),
+            type: 'group',
+            name: convo.name,
+            image: convo.groupImage,
+            members: convo.members.map(member => ({
+                userId: member._id.toString(),
+                fullName: member.fullName,
+                profilePic: member.profilePic
+            })),
+            // Add other necessary group conversation properties
+        }));
+
+        // 2. Fetch one-on-one channels from Stream
+        const streamChannels = await streamClient.queryChannels({
+            type: 'messaging',
+            members: { $in: [streamUserId] },
+        }, {}, {
+            watch: false, // Don't watch channels here
+            state: true, // Include state to get members and last message
+        });
+
+        // Combine and format the results (basic combination, you might need more sophisticated logic)
+        const allConversations = [
+            ...formattedGroupConversations,
+            // Add formatted Stream one-on-one channels here
+            // You'll need to map streamChannels to a similar format as formattedGroupConversations
+        ];
+        res.status(200).json({
+ conversations: allConversations
+ });
+    } catch (error) {
+        console.error("Error in getUserConversations controller", error.message);
         res.status(500).json({ message: "Internal Server Error" });
     }
 }

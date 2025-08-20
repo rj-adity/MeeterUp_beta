@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { useParams } from "react-router-dom";
 import useAuthUser from "../hooks/useAuthUser";
 import { useStreamClient } from "../hooks/useStreamClient";
 import {
@@ -19,142 +19,92 @@ import { getBlockedUsers } from "../lib/api";
 import { Mic, Square, Video as VideoIcon } from "lucide-react";
 
 const ChatPage = () => {
-  const {id: targetUserId} = useParams();
+  const { id: targetUserId } = useParams();
   const [chatClient, setChatClient] = useState(null);
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
   const { theme } = useThemeStore();
 
-  const {authUser} = useAuthUser();
+  const { authUser } = useAuthUser();
   const globalClient = useStreamClient();
   const { resetChannelUnread, clearNotificationsBySender } = useMessageStore();
   const [isBlocked, setIsBlocked] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
+
+  // Recording state
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [audioStream, setAudioStream] = useState(null);
   const [audioChunks, setAudioChunks] = useState([]);
   const [mediaRecorder, setMediaRecorder] = useState(null);
 
-  useEffect(()=> {
+  useEffect(() => {
     const initChat = async () => {
-      // Wait for auth and global client to be ready and connected
-      if(!authUser || !globalClient || globalClient.userID !== authUser._id) {
-        console.log("Waiting for global Stream client connection", {
-          hasAuthUser: !!authUser,
-          hasClient: !!globalClient,
-          userId: globalClient?.userID
-        });
-        return;
-      }
-
+      if (!authUser || !globalClient || globalClient.userID !== authUser._id) return;
       try {
-        console.log("Initialising channel on existing Stream client...")
-
         const channelId = [authUser._id, targetUserId].sort().join("_");
-
-        //Create a channel 
         const currChannel = globalClient.channel("messaging", channelId, {
           members: [authUser._id, targetUserId],
         });
-        
         await currChannel.watch();
-        
         setChatClient(globalClient);
         setChannel(currChannel);
       } catch (error) {
-        console.error("Error initializing stream chat client", error);
-        toast.error("Could not connect to chat. Please try again later.")
+        console.error("Error initializing Stream chat client", error);
+        toast.error("Could not connect to chat. Please try again later.");
       } finally {
         setLoading(false);
       }
-    }
-    initChat();
-    
-    // Cleanup: do not disconnect the global client; just stop using channel
-    return () => {
-      // no-op; Stream handles channel listeners internally when component unmounts
     };
-  },[authUser, targetUserId, globalClient]);
+    initChat();
+  }, [authUser, targetUserId, globalClient]);
 
-  // When on a chat, clear unread counts and notifications for that sender
   useEffect(() => {
     if (!channel || !targetUserId) return;
-    const channelId = channel.id;
-    resetChannelUnread(channelId);
+    resetChannelUnread(channel.id);
     clearNotificationsBySender(targetUserId);
   }, [channel, targetUserId, resetChannelUnread, clearNotificationsBySender]);
 
-  // Check if target user is blocked by me
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         const blocked = await getBlockedUsers();
-        if (mounted) {
-          setIsBlocked(Boolean(blocked?.some?.((u) => u._id === targetUserId)));
-        }
+        if (mounted) setIsBlocked(Boolean(blocked?.some((u) => u._id === targetUserId)));
       } catch {}
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [targetUserId]);
 
+  // Video call logic (header button)
   const handleVideoCall = () => {
-    if(channel) {
-      const callUrl = `${window.location.origin}/call/${channel.id}`;
+    if (!channel) return;
+    const callUrl = `${window.location.origin}/call/${channel.id}`;
+    channel.sendMessage({
+      text: `I have started a video call. Join me here: ${callUrl}`,
+    });
+    toast.success("Video call link sent!");
+  };
 
-      channel.sendMessage({
-        text: `I have started a video call. Join me here: ${callUrl}`,
-      })
-
-      toast.success("Video call link sent successfully!")
-    }
-  }
-
-  const startRecording = async () => {
+  // Audio recording logic
+  const startRecordingAudio = async () => {
+    if (!channel) return;
     try {
-      if (!channel) return;
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Pick the most compatible mime type available
-      const preferredTypes = [
-        "audio/webm;codecs=opus",
-        "audio/ogg;codecs=opus",
-        "audio/mp4",
-        "audio/mpeg",
-      ];
-      let selectedMime = "";
-      for (const t of preferredTypes) {
-        try {
-          if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) {
-            selectedMime = t;
-            break;
-          }
-        } catch {}
-      }
-      const recorder = selectedMime ? new MediaRecorder(stream, { mimeType: selectedMime }) : new MediaRecorder(stream);
+      const recorder = new MediaRecorder(stream);
       const chunks = [];
       recorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) chunks.push(e.data);
       };
       recorder.onstop = async () => {
         try {
-          const blobType = selectedMime || "audio/webm";
-          const blob = new Blob(chunks, { type: blobType });
-          let ext = "webm";
-          if (blobType.includes("ogg")) ext = "ogg";
-          else if (blobType.includes("mp4")) ext = "m4a";
-          else if (blobType.includes("mpeg")) ext = "mp3";
-          const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: blobType });
-          // Upload to Stream CDN
+          const blob = new Blob(chunks, { type: "audio/webm" });
+          const file = new File([blob], `voice-${Date.now()}.webm`, { type: blob.type });
           const upload = await channel.sendFile(file);
-          const fileUrl = upload?.file;
           await channel.sendMessage({
             text: "",
             attachments: [
-              {
-                type: "audio",
-                asset_url: fileUrl,
-                title: file.name,
-                mime_type: blobType,
-              },
+              { type: "audio", asset_url: upload?.file, title: file.name, mime_type: blob.type },
             ],
           });
           toast.success("Voice message sent");
@@ -162,114 +112,121 @@ const ChatPage = () => {
           console.error("Error sending voice message", err);
           toast.error("Failed to send voice message");
         } finally {
-          setIsRecording(false);
+          setIsRecordingAudio(false);
           setAudioChunks([]);
           setMediaRecorder(null);
           try { stream.getTracks().forEach((t) => t.stop()); } catch {}
           setAudioStream(null);
         }
       };
-      setAudioStream(stream);
-      setAudioChunks(chunks);
-      setMediaRecorder(recorder);
       recorder.start();
-      setIsRecording(true);
+      setAudioChunks(chunks);
+      setAudioStream(stream);
+      setMediaRecorder(recorder);
+      setIsRecordingAudio(true);
     } catch (err) {
       console.error("Mic permission / recording error", err);
       toast.error("Microphone not available");
     }
   };
 
-  const stopRecording = () => {
-    try {
-      if (mediaRecorder && mediaRecorder.state !== "inactive") {
-        mediaRecorder.stop();
-      }
-    } catch {}
+  const stopRecordingAudio = () => {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
   };
 
-  if(loading || !chatClient || !channel ) return <ChatLoader />;
+  const startVideoRecording = async () => {
+    toast("Video-recording not implemented yet");
+  };
 
-  // Stream Chat theme configuration based on current theme
+  if (loading || !chatClient || !channel) return <ChatLoader />;
+
   const streamTheme = {
-    'light': 'light',
-    'dark': 'dark',
-    'forest': 'dark',
-    'synthwave': 'dark',
-    'cyberpunk': 'dark',
-    'retro': 'light',
-    'valentine': 'light',
-    'aqua': 'light',
-    'dracula': 'dark',
-    'night': 'dark',
-    'coffee': 'dark',
-    'winter': 'light'
+    light: "light",
+    dark: "dark",
+    forest: "dark",
+    synthwave: "dark",
+    cyberpunk: "dark",
+    retro: "light",
+    valentine: "light",
+    aqua: "light",
+    dracula: "dark",
+    night: "dark",
+    coffee: "dark",
+    winter: "light",
   };
 
   return (
-    <div className="min-h-[100dvh] p-2 sm:p-4 flex items-center justify-center" style={{ backgroundColor: `hsl(var(--b2))` }}>
+    <div className="min-h-[100dvh] p-2 sm:p-4 flex items-center justify-center" style={{ backgroundColor: "hsl(var(--b2))" }}>
       <div className="w-full max-w-4xl bg-base-100 rounded-none sm:rounded-lg shadow-none sm:shadow-lg flex flex-col h-[100dvh] sm:h-[85vh]">
-        {/* Custom Header - Outside of Stream Chat components */}
+        
+        {/* Header */}
         <div className="flex items-center justify-between p-3 sm:p-4 border-b border-base-300 shrink-0 bg-base-100">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden flex items-center justify-center">
               {channel?.state?.members?.[targetUserId]?.user?.image ? (
-                <img 
-                  src={channel.state.members[targetUserId].user.image} 
-                  alt="User avatar" 
+                <img
+                  src={channel.state.members[targetUserId].user.image}
+                  alt="User avatar"
                   className="w-full h-full object-cover"
                 />
               ) : (
                 <div className="w-full h-full bg-primary flex items-center justify-center text-white font-semibold">
-                  {channel?.state?.members?.[targetUserId]?.user?.name?.charAt(0)?.toUpperCase() || 
-                   targetUserId?.charAt(0)?.toUpperCase() || 'U'}
+                  {channel?.state?.members?.[targetUserId]?.user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
               )}
             </div>
             <div>
               <h2 className="font-semibold text-base sm:text-lg text-base-content">
-                {channel?.state?.members?.[targetUserId]?.user?.name || 
-                 `User ${targetUserId?.slice(-4) || ''}`}
+                {channel?.state?.members?.[targetUserId]?.user?.name || `User ${targetUserId?.slice(-4)}`}
               </h2>
               <p className="text-xs sm:text-sm text-base-content/70">2 members, 2 online</p>
             </div>
           </div>
-          <div className="flex items-center">
-            <CallButton handleVideoCall={handleVideoCall} />
-          </div>
+
+          {/* Right side: video call button */}
+          <CallButton handleVideoCall={handleVideoCall} />
         </div>
 
         {/* Chat Content */}
         <div className="flex-1 min-h-0">
-          <Chat client={chatClient} theme={streamTheme[theme] || 'light'}>
+          <Chat client={chatClient} theme={streamTheme[theme] || "light"}>
             <Channel channel={channel}>
               <Window>
-                <MessageList messageActions={['react', 'reply']} />
+                <MessageList messageActions={["react", "reply"]} />
+
                 {!isBlocked ? (
-                  <div className="relative">
-                    <MessageInput focus disableVoiceRecording grow type="text" />
-                    <div className="absolute right-2 bottom-2 flex items-center gap-2">
-                      {!isRecording ? (
+                  <div className="p-3 border-t border-base-300 bg-base-100 relative">
+                    <MessageInput
+                      focus
+                      type="text"
+                      grow
+                      placeholder="Type a message..."
+                      className="pr-24"
+                    />
+
+                    <div className="absolute flex items-center gap-2 z-20" style={{ right: 10, bottom: 6 }}>
+                      {!isRecordingAudio ? (
                         <button
-                          className="btn btn-ghost btn-sm"
+                          className="btn btn-ghost btn-sm p-2 rounded-full"
+                          onClick={startRecordingAudio}
                           title="Send voice message"
-                          onClick={startRecording}
                         >
                           <Mic className="h-5 w-5" />
                         </button>
                       ) : (
                         <button
-                          className="btn btn-error btn-sm"
+                          className="btn btn-error btn-sm p-2 rounded-full"
+                          onClick={stopRecordingAudio}
                           title="Stop recording"
-                          onClick={stopRecording}
                         >
                           <Square className="h-5 w-5" />
                         </button>
                       )}
+
                       <button
-                        className="btn btn-ghost btn-sm"
-                        title="Start video call"
-                        onClick={handleVideoCall}
+                        className="btn btn-ghost btn-sm p-2 rounded-full"
+                        onClick={startVideoRecording}
+                        title="Record video (not implemented)"
                       >
                         <VideoIcon className="h-5 w-5" />
                       </button>
@@ -287,7 +244,7 @@ const ChatPage = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ChatPage
+export default ChatPage;

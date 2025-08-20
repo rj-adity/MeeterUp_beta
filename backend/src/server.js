@@ -1,14 +1,15 @@
 import express from "express" ;
 import dotenv from "dotenv"
 import cookieParser from "cookie-parser"
-
 import cors from "cors";
 import path from "path";
+
 import fs from "fs";
 
 import authRoutes from "./routes/auth.route.js"
 import userRoutes from "./routes/user.route.js"
 import chatRoutes from "./routes/chat.route.js"
+import groupRoutes from "./routes/group.route.js"
 
 import { connectDB } from "./lib/db.js";
 
@@ -30,9 +31,6 @@ console.log("STEAM_API_SECRET:", process.env.STEAM_API_SECRET ? "Present" : "Mis
 console.log("JWT_SECRET_KEY:", process.env.JWT_SECRET_KEY ? "Present" : "Missing");
 console.log("MONGO_URI:", process.env.MONGO_URI ? "Present" : "Missing");
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-const __dirname = path.resolve();
 
 // CORS configuration for development and production
 const allowedOrigins = [
@@ -40,8 +38,13 @@ const allowedOrigins = [
     "http://localhost:5001",
     "http://localhost:3000",
     "https://meeterup-beta.onrender.com",
-    "https://meeterup-app.onrender.com"
+    "https://meeterup-app.onrender.com",
+    "https://5001-firebase-meeterupbetagit-1755642693913.cluster-d5vecjrg5rhlkrz6nm4jty7avc.cloudworkstations.dev"
 ];
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const __dirname = path.resolve();
 
 app.use(cors({
     origin: function (origin, callback) {
@@ -92,6 +95,7 @@ app.get("/test", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/groups", groupRoutes);
 
 // API health check
 app.get("/api/health", (req, res) => {

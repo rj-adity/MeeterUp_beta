@@ -1,104 +1,134 @@
-import { Link, useLocation } from "react-router"
+import { Link, useLocation, useNavigate } from "react-router";
 import useAuthUser from "../hooks/useAuthUser";
-import {BellIcon, HousePlus, PandaIcon, ShieldUser, Settings } from "lucide-react";
+import { 
+  PandaIcon, 
+  LayoutDashboard, 
+  Users, 
+  Bell, 
+  UserPlus 
+} from "lucide-react"; 
 import { useMessageStore } from "../store/useMessageStore";
-
+import { useQuery } from "@tanstack/react-query";
+import { getUserConversations } from "../lib/api";
+import { useState } from "react";
+import CreateGroupModal from "../components/CreateGroupModal";
 
 const Sidebar = () => {
-    const {authUser} = useAuthUser();
-    const { totalUnread } = useMessageStore();
-    const location = useLocation();
-    const currentPath = location.pathname;
+  const { authUser, isLoading: isLoadingAuthUser } = useAuthUser();
+  const { totalUnread } = useMessageStore();
+  const location = useLocation();
+  const currentPath = location.pathname;
+  const navigate = useNavigate();
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
 
-    console.log(currentPath);
+  const { data: conversations = [], isLoading: isLoadingConversations } = useQuery({
+    queryKey: ["conversations", authUser?._id],
+    queryFn: () => getUserConversations(authUser._id),
+    enabled: !!authUser && !isLoadingAuthUser,
+  });
+
   return (
-    <aside className="w-64 bg-base-200 border-r border-base-300 hidden lg:flex flex-col h-screen sticky top-0" >
+    <>
+      <aside className="w-64 bg-base-200 border-r border-base-300 hidden lg:flex flex-col h-screen sticky top-0">
+        {/* Logo/Header */}
         <div className="p-5 border-b border-base-300">
-            <Link to="/" className="flex items-center gap-2.5">
+          <Link to="/" className="flex items-center gap-2.5">
             <PandaIcon className="size-9 text-primary" />
-            <span className="text-3xl font-bold font-mono bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary tracking tracking-wider" >
-                MeeterUp
+            <span className="text-3xl font-bold font-mono bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary tracking-wider">
+              MeeterUp
             </span>
-            </Link>
+          </Link>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1" >
-            <Link 
-            to="/"
-            className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${
-                currentPath === "/" ? "btn-active" : ""
-            }`}
-            >
-            <HousePlus className="size-5 text-base-content opacity-70" />
-            <span>Home</span>
-            </Link>
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-1">
+          <ul className="menu bg-base-200 w-56 rounded-box">
+            <li>
+              <Link to="/">
+                <LayoutDashboard className="size-4" /> Dashboard
+              </Link>
+            </li>
+            <li>
+              <Link to="/friends">
+                <Users className="size-4" /> Friends
+              </Link>
+            </li>
+            <li>
+              <Link to="/notification">
+                <Bell className="size-4" /> Notifications
+                {totalUnread > 0 && (
+                  <span className="badge badge-error ml-2">{totalUnread}</span>
+                )}
+              </Link>
+            </li>
+            <li>
+              <button
+                onClick={() => setIsGroupModalOpen(true)}
+                className="flex items-center gap-2 px-3 py-2 hover:bg-base-300 rounded-lg"
+              >
+                <UserPlus className="size-4" /> Create Group
+              </button>
+            </li>
+          </ul>
 
-            <Link 
-            to="/friends"
-            className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${
-                currentPath === "/friends" ? "btn-active" : ""
-            }`}
-            >
-            <ShieldUser className="size-5 text-base-content opacity-70" />
-            <span>Friends</span>
-            </Link>
-
-            <Link 
-            to="/notification"
-            className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${
-                currentPath === "/notification" ? "btn-active" : ""
-            }`}
-            >
-            <div className="relative">
-              <BellIcon className="size-5 text-base-content opacity-70" />
-              {totalUnread > 0 && (
-                <span className="badge badge-primary badge-xs absolute -top-2 -right-3">
-                  {totalUnread}
-                </span>
-              )}
-            </div>
-            <span>Notifications</span>
-            </Link>   
-
-            <Link 
-            to="/settings"
-            className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${
-                currentPath === "/settings" ? "btn-active" : ""
-            }`}
-            >
-            <Settings className="size-5 text-base-content opacity-70" />
-            <span>Settings</span>
-            </Link>
+          {/* Conversations List */}
+          <div className="border-t border-base-300 mt-4 pt-4">
+            <h4 className="px-4 text-sm font-semibold mb-2">Chats</h4>
+            {isLoadingAuthUser || isLoadingConversations ? (
+              <div className="flex justify-center">
+                <span className="loading loading-spinner loading-sm" />
+              </div>
+            ) : (
+              <ul className="space-y-1">
+                {Array.isArray(conversations) &&
+                  conversations.map((conversation) => (
+                    <li key={conversation.id}>
+                      <Link
+                        to={`/chat/${conversation.type}/${conversation.id}`}
+                        className={`btn btn-ghost w-full justify-start ${
+                          currentPath ===
+                          `/chat/${conversation.type}/${conversation.id}`
+                            ? "btn-active"
+                            : ""
+                        }`}
+                      >
+                        {conversation.isGroup
+                          ? conversation.name
+                          : conversation.otherParticipant?.fullName ||
+                            "Direct Message"}
+                      </Link>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
         </nav>
-        
-        {/* Create Group Button */}
-        <div className="p-4">
-            <Link
-                to="/create-group" // Or handle this with a modal
-                className="btn btn-primary w-full normal-case"
-            >Create Group
-            </Link>
-        </div>
 
-        {/* USER PROFILE SECTION */}
-        <div className="p-4 border-t border-base-300 mt-auto" >  
-            <div className="flex items-center gap-3">
-               <div className="avatar">
-                <div className="w-10 rounded-full">
-                    <img src={authUser?.profilePic} alt="User Avatar"/>
-                </div>
-               </div>
-               <div className="flex-1" >
-                <p className="font-semibold text-sm" >{authUser?.fullName}</p>
-                <p className="text-xs text-sucess flex items-center gap-1" >
-                    <span className="size-2 rounded-full bg-success inline-block" />
-                    Online
-                </p>
-               </div>
+        {/* User Profile */}
+        <div className="p-4 border-t border-base-300 mt-auto">
+          <div className="flex items-center gap-3">
+            <div className="avatar">
+              <div className="w-10 rounded-full">
+                <img src={authUser?.profilePic} alt="User Avatar" />
+              </div>
             </div>
+            <div className="flex-1">
+              <p className="font-semibold text-sm">{authUser?.fullName}</p>
+              <p className="text-xs text-success flex items-center gap-1">
+                <span className="size-2 rounded-full bg-success inline-block" />
+                Online
+              </p>
+            </div>
+          </div>
         </div>
-    </aside>
-  )
-}
+      </aside>
 
-export default Sidebar
+      {/* Group Modal */}
+      {isGroupModalOpen && (
+        <CreateGroupModal onClose={() => setIsGroupModalOpen(false)} />
+      )}
+    </>
+  );
+};
+
+export default Sidebar;
